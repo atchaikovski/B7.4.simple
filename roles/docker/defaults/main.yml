@@ -1,0 +1,74 @@
+---
+
+docker_version: 20.10
+systemd_dir: /lib/systemd/system
+system_env_dir: /etc/sysconfig
+network_dir: /etc/kubernetes/network
+kubeadmin_config: /etc/kubernetes/admin.conf
+kube_addon_dir: /etc/kubernetes/addon
+
+- name: Get os_version from /etc/os-release
+  when: ansible_os_family is not defined
+  raw: "grep '^VERSION_ID=' /etc/os-release | sed s'/VERSION_ID=//'"
+  register: os_version
+  changed_when: False
+
+- name: Get distro name from /etc/os-release
+  when: ansible_os_family is not defined
+  raw: "grep '^NAME=' /etc/os-release | sed s'/NAME=//'"
+  register: distro
+  changed_when: False
+
+- name: Set fact ansible_os_family var to RedHat
+  when:
+    - ansible_os_family is not defined
+    - "'CentOS' in distro.stdout"
+  set_fact:
+    ansible_os_family: RedHat
+
+- name: Disable system swap
+  shell: "swapoff -a"
+
+- name: Remove current swaps from fstab
+  lineinfile:
+    dest: /etc/fstab
+    regexp: '(?i)^([^#][\S]+\s+(none|swap)\s+swap.*)'
+    line: '# \1'
+    backrefs: yes
+    state: present
+
+- name: Disable swappiness and pass bridged IPv4 traffic to iptable's chains
+  sysctl:
+    name: "{{ item.name }}"
+    value: "{{ item.value }}"
+    state: present
+  with_items:
+    - { name: 'vm.swappiness', value: '0' }
+    - { name: 'net.bridge.bridge-nf-call-iptables', value: '1' }
+
+- name: Create service drop-in directory
+  file:
+    path: /etc/systemd/system/kubelet.service.d/
+    state: directory
+    owner: "{{ ansible_user | default(ansible_user_id) }}"
+    group: "{{ ansible_user | default(ansible_user_id) }}"
+    mode: 0755
+
+- name: Copy kubeadm conf to drop-in directory
+  template: src=20-extra-args.conf.j2 dest=/etc/systemd/system/kubelet.service.d/20-extra-args.conf
+
+- name: Reload kubelet daemon
+  systemd:
+    name: kubelet
+    daemon_reload: yes
+    enabled: yes
+
+- name: Add Kubernetes yum repository
+  when: ansible_os_family == "RedHat"
+  yum_repository:
+    name: Kubernetes
+    description: Kubernetes Repository
+    file: kubernetes
+    baseurl: http://yum.kubernetes.io/repos/kubernetes-el7-x86_64
+    enabled: yes
+    gpgcheck: no

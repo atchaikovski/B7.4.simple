@@ -1,0 +1,26 @@
+[Unit]
+Description=Docker Engine
+After=network.target
+
+[Service]
+Type=notify
+EnvironmentFile=-{{ system_env_dir }}/docker
+EnvironmentFile=-/etc/sysconfig/docker-storage
+EnvironmentFile=-/etc/sysconfig/docker-network
+ExecStart=
+ExecStart=/usr/bin/dockerd  -H fd:// $OPTIONS $DOCKER_STORAGE_OPTIONS \
+  $DOCKER_OPTS $DOCKER_NETWORK_OPTIONS \
+  $ADD_REGISTRY $BLOCK_REGISTRY $INSECURE_REGISTRY
+
+ExecStartPost=/sbin/iptables -I FORWARD -s 0.0.0.0/0 -j ACCEPT
+ExecReload=/bin/kill -s HUP $MAINPID
+Restart=on-failure
+LimitNOFILE=1048576
+LimitNPROC=infinity
+LimitCORE=infinity
+TimeoutStartSec=0
+Delegate=yes
+KillMode=process
+
+[Install]
+WantedBy=multi-user.target
