@@ -28,7 +28,7 @@ resource "aws_instance" "master" {
   }
 
   provisioner "local-exec" {
-      command = "ansible-playbook -b -u centos -i '${element(aws_instance.master.*.public_ip, 0)},' --private-key ${var.private_key} -e 'pub_key=${var.public_key}' master.yaml"
+      command = "ansible-playbook -i '${element(aws_instance.master.*.public_ip, 0)},' --private-key ${var.private_key} -e 'pub_key=${var.public_key}' master.yaml"
   }
 
   tags = { 
@@ -50,12 +50,12 @@ resource "aws_instance" "worker" {
   associate_public_ip_address = true
 
   # provision by ansible as worker using public IP
-  provisioner "local-exec" {
-      command = "sleep 90"
-  }
-  provisioner "local-exec" {
-      command = "ansible-playbook -b -u centos -i '${element(aws_instance.worker.*.public_ip, 0)},' --private-key ${var.private_key} -e 'pub_key=${var.public_key}' worker.yaml"
-  }
+  #provisioner "local-exec" {
+  #    command = "sleep 90"
+  #}
+  #provisioner "local-exec" {
+  #    command = "ansible-playbook -i '${element(aws_instance.worker.*.public_ip, 0)},' --private-key ${var.private_key} -e 'pub_key=${var.public_key}' worker.yaml"
+  #}
  
  tags = {
     Name = "Worker Server"

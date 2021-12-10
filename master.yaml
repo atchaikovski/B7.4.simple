@@ -1,6 +1,9 @@
 ---
 
 - hosts: all
-  gather_facts: yes
+  remote_user: centos
+  become: yes
+  become_user: root
   roles:
-    - { role: master, tags: master }
+    - kubernetes/master
+    

@@ -27,6 +27,65 @@
     dest: /etc/yum.repos.d/docker-ce.repo
   become: yes
 
+- name: Disable system swap
+  shell: "swapoff -a"
+
+- name: Remove current swaps from fstab
+  lineinfile:
+    dest: /etc/fstab
+    regexp: '(?i)^([^#][\S]+\s+(none|swap)\s+swap.*)'
+    line: '# \1'
+    backrefs: yes
+    state: present
+
+- name: Set bridge-nf-call settings
+# Disable Swap from current session
+  command: "{{ item }}"
+  with_items:
+    - modprobe bridge
+    - echo "net.bridge.bridge-nf-call-iptables = 1" >> /etc/sysctl.conf
+    - modprobe br_netfilter
+    - sysctl -p /etc/sysctl.conf
+
+
+- name: Disable swappiness and pass bridged IPv4 traffic to iptable's chains
+  sysctl:
+    name: "{{ item.name }}"
+    value: "{{ item.value }}"
+    state: present
+  with_items:
+    - { name: 'vm.swappiness', value: '0' }
+    - { name: 'net.bridge.bridge-nf-call-iptables', value: '1' }
+
+- name: Create service drop-in directory
+  file:
+    path: /etc/systemd/system/kubelet.service.d/
+    state: directory
+    owner: "{{ ansible_user | default(ansible_user_id) }}"
+    group: "{{ ansible_user | default(ansible_user_id) }}"
+    mode: 0755
+
+- name: Creating a sysctl k8s.conf file
+  copy:
+    dest: "/etc/sysctl.d/k8s.conf"
+    content: |
+      net.bridge.bridge-nf-call-ip6tables = 1
+      net.bridge.bridge-nf-call-iptables = 1
+  become: yes
+
+- name: Copy kubeadm conf to drop-in directory
+  template: src=20-extra-args.conf.j2 dest=/etc/systemd/system/kubelet.service.d/20-extra-args.conf
+
+- name: Add Kubernetes yum repository
+  when: ansible_os_family == "RedHat"
+  yum_repository:
+    name: Kubernetes
+    description: Kubernetes Repository
+    file: kubernetes
+    baseurl: http://yum.kubernetes.io/repos/kubernetes-el7-x86_64
+    enabled: yes
+    gpgcheck: no
+
 - name: Install Docker CE
   package:
     name: docker-ce
@@ -46,20 +105,3 @@
     groups: docker
     append: yes
   become: yes
-
-- name: Creating a modules k8s.conf file
-  copy:
-    dest: "/etc/modules-load.d/k8s.conf"
-    content: |
-      br_netfilter
-  become: yes
-
-- name: Creating a sysctl k8s.conf file
-  copy:
-    dest: "/etc/sysctl.d/k8s.conf"
-    content: |
-      net.bridge.bridge-nf-call-ip6tables = 1
-      net.bridge.bridge-nf-call-iptables = 1
-  become: yes
-
-
