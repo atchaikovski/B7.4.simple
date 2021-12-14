@@ -7,11 +7,14 @@
 
 - name: Install kubernetes packages (RHEL/CentOS)
   when: ansible_os_family == "RedHat"
-  yum:
-    name: "{{ pkgs }}"
+  ansible.builtin.yum:
+    name: "{{ item }}"
     update_cache: yes
     state: installed
-  with_items: "{{ pkgs }}"
+  with_items:
+  - kubelet
+  - kubeadm
+  - kubectl
 
 - name: Reload kubelet daemon
   systemd:
