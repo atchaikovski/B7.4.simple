@@ -41,6 +41,7 @@ resource "aws_instance" "master" {
 }
 
 resource "aws_instance" "worker" {
+  # got Centos 7 image directly from Amazon
   ami                         = "ami-0affd4508a5d2481b"
   #ami                         = data.aws_ami.latest_amazon_linux.id
   instance_type               = var.instance_type
@@ -50,12 +51,13 @@ resource "aws_instance" "worker" {
   associate_public_ip_address = true
 
   # provision by ansible as worker using public IP
-  #provisioner "local-exec" {
-  #    command = "sleep 90"
-  #}
-  #provisioner "local-exec" {
-  #    command = "ansible-playbook -i '${element(aws_instance.worker.*.public_ip, 0)},' --private-key ${var.private_key} -e 'pub_key=${var.public_key}' worker.yaml"
-  #}
+  provisioner "local-exec" {
+      command = "sleep 90"
+  }
+  
+  provisioner "local-exec" {
+      command = "ansible-playbook -i '${element(aws_instance.worker.*.public_ip, 0)},' --private-key ${var.private_key} -e 'pub_key=${var.public_key}' worker.yaml"
+  }
  
  tags = {
     Name = "Worker Server"

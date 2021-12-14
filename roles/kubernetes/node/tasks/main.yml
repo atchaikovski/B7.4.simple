@@ -5,6 +5,14 @@
     path: "/etc/kubernetes/kubelet.conf"
   register: kubelet_conf
 
+- name: Install kubernetes packages (RHEL/CentOS)
+  when: ansible_os_family == "RedHat"
+  yum:
+    name: "{{ pkgs }}"
+    update_cache: yes
+    state: installed
+  with_items: "{{ pkgs }}"
+  
 - name: Join to cluster if needed
   include_tasks: join.yml
   when: not kubelet_conf.stat.exists
@@ -15,11 +23,3 @@
     daemon_reload: yes
     state: started
     enabled: yes
-
-- name: Install kubernetes packages (RHEL/CentOS)
-  when: ansible_os_family == "RedHat"
-  yum:
-    name: "{{ pkgs }}"
-    update_cache: yes
-    state: installed
-  with_items: "{{ pkgs }}""
