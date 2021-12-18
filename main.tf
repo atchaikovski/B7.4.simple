@@ -9,7 +9,6 @@ locals {
   worker_end   = [22, 10250, 32767] # to_ports
 } 
 
-
 # ------------------- EC2 resources ---------------------------------
 
 resource "aws_instance" "master" {
@@ -65,6 +64,27 @@ resource "aws_instance" "worker" {
     ansibleNodeType = "worker"
     ansibleNodeName = "worker${count.index}"
  }
+}
+
+# --------------- write inventory file ---------------------
+resource "local_file" "inventory" {
+  filename           = "hosts.ini"
+  file_permission    = "0644"
+  sensitive_content  = <<-EOF
+master0 ansible_host=${element(aws_instance.master.*.public_ip, 0)}
+worker0 ansible_host=${element(aws_instance.worker.*.public_ip, 0)}
+
+[control]
+master0
+
+[node]
+worker0
+
+[k8s_cluster:children]
+master0
+worker0
+
+EOF
 }
 
 # --------------- get static IP addresses ------------------
