@@ -1,13 +1,3 @@
-# ---------------------- allowed ports --------------------------------------
-locals {
-  master_start = [22, 2379, 6443, 10250, 10257, 10259] # from_ports
-  master_end   = [22, 2380, 6443, 10250, 10257, 10259] # to_ports
-}
-
-locals {
-  worker_start = [22, 10250, 30000] # from_ports
-  worker_end   = [22, 10250, 32767] # to_ports
-} 
 
 # ------------------- EC2 resources ---------------------------------
 
@@ -70,7 +60,7 @@ resource "aws_instance" "worker" {
 resource "local_file" "inventory" {
   filename           = "hosts.ini"
   file_permission    = "0644"
-  sensitive_content  = <<-EOF
+  content  = <<-EOF
 master0 ansible_host=${element(aws_instance.master.*.public_ip, 0)}
 worker0 ansible_host=${element(aws_instance.worker.*.public_ip, 0)}
 
