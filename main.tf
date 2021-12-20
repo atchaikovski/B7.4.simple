@@ -9,10 +9,6 @@ resource "aws_instance" "master" {
   count                       = 1
   associate_public_ip_address = true
   
-  #provisioner "local-exec" {
-  #    command = "ansible-playbook -i '${element(aws_instance.master.*.public_ip, 0)},' --private-key ${var.private_key} -e 'pub_key=${var.public_key}' master.yaml"
-  #}
-
   tags = { 
     Name = "Master Server"
     ansibleFilter = "K8S01"
@@ -28,10 +24,7 @@ resource "aws_instance" "worker" {
   count                       = 1
   associate_public_ip_address = true
 
-  #provisioner "local-exec" {
-  #}
- 
- tags = {
+  tags = {
     Name = "Worker Server"
     ansibleFilter = "K8S01"
  }
@@ -59,6 +52,7 @@ worker0
 EOF
 }
 
+# -------------- launch Ansible to deploy k8s on these resources -----------------
 resource "null_resource" "null1" {
   depends_on = [
      local_file.inventory
@@ -69,7 +63,7 @@ resource "null_resource" "null1" {
   }
 
   provisioner "local-exec" {
-     command = "ansible-playbook -i inventory --private-key ${var.private_key} -e 'pub_key=${var.public_key}' playbook.yaml"
+     command = "ansible-playbook -i ./inventory --private-key ${var.private_key} -e 'pub_key=${var.public_key}' playbook.yaml"
   }
 
 }

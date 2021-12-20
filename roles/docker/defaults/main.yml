@@ -9,3 +9,6 @@ kubeadmin_config: /etc/kubernetes/admin.conf
 kube_addon_dir: /etc/kubernetes/addon
 ansible_os_family: RedHat
 os_version: 7
+
+master_ip: "{{ hostvars[groups['master'][0]]['ansible_default_ipv4'].address | default(groups['master'][0]) }}"
+token: ztx13x.erwimwrdyrqtlaoe
