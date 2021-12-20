@@ -1,0 +1,17 @@
+---
+
+- name: Configure Master node
+  hosts: master
+  remote_user: centos
+  become: yes
+  become_user: root
+  roles:
+    - kubernetes/master
+
+- name: Configure Worker node
+  hosts: worker
+  remote_user: centos
+  become: yes
+  become_user: root
+  roles:
+    - kubernetes/worker

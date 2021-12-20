@@ -1,0 +1,12 @@
+master0 ansible_host=34.226.115.54
+worker0 ansible_host=3.229.151.201
+
+[master]
+master0
+
+[worker]
+worker0
+
+[k8s_cluster:children]
+master0
+worker0

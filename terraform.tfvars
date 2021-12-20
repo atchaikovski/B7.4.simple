@@ -1,5 +1,5 @@
 region                     = "us-east-1"
-instance_type              = "t2.small"
+instance_type              = "t2.medium"
 enable_detailed_monitoring = true
 
 private_key  =  "~/.ssh/aws_adhoc.pem"

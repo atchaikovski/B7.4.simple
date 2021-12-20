@@ -3,78 +3,75 @@
 
 resource "aws_instance" "master" {
   ami                         = "ami-0affd4508a5d2481b"
-  #ami                         = data.aws_ami.latest_amazon_linux.id
   instance_type               = var.instance_type
   vpc_security_group_ids      = [aws_security_group.master.id]
   key_name                    = "aws_adhoc"
   count                       = 1
   associate_public_ip_address = true
   
-  # provision by ansible as master using public IP
-  
-  provisioner "local-exec" {
-      command = "sleep 90"
-  }
-
-  provisioner "local-exec" {
-      command = "ansible-playbook -i '${element(aws_instance.master.*.public_ip, 0)},' --private-key ${var.private_key} -e 'pub_key=${var.public_key}' master.yaml"
-  }
+  #provisioner "local-exec" {
+  #    command = "ansible-playbook -i '${element(aws_instance.master.*.public_ip, 0)},' --private-key ${var.private_key} -e 'pub_key=${var.public_key}' master.yaml"
+  #}
 
   tags = { 
     Name = "Master Server"
     ansibleFilter = "K8S01"
-    ansibleNodeType = "master"
-    ansibleNodeName = "master${count.index}"
   }
 
 }
 
 resource "aws_instance" "worker" {
-  # got Centos 7 image directly from Amazon
   ami                         = "ami-0affd4508a5d2481b"
-  #ami                         = data.aws_ami.latest_amazon_linux.id
   instance_type               = var.instance_type
   vpc_security_group_ids      = [aws_security_group.worker.id]
   key_name                    = "aws_adhoc"
   count                       = 1
   associate_public_ip_address = true
 
-  # provision by ansible as worker using public IP
-  provisioner "local-exec" {
-      command = "sleep 90"
-  }
-  
-  provisioner "local-exec" {
-      command = "ansible-playbook -i '${element(aws_instance.worker.*.public_ip, 0)},' --private-key ${var.private_key} -e 'pub_key=${var.public_key}' worker.yaml"
-  }
+  #provisioner "local-exec" {
+  #}
  
  tags = {
     Name = "Worker Server"
     ansibleFilter = "K8S01"
-    ansibleNodeType = "worker"
-    ansibleNodeName = "worker${count.index}"
  }
 }
 
 # --------------- write inventory file ---------------------
 resource "local_file" "inventory" {
-  filename           = "hosts.ini"
+  depends_on         = [
+    aws_instance.master,
+    aws_instance.worker
+  ]
+
+  filename           = "inventory"
   file_permission    = "0644"
-  content  = <<-EOF
-master0 ansible_host=${element(aws_instance.master.*.public_ip, 0)}
-worker0 ansible_host=${element(aws_instance.worker.*.public_ip, 0)}
+  content            = <<-EOF
+[master]
+master0 ansible_host=${aws_eip.master_static_ip.public_ip}
 
-[control]
-master0
-
-[node]
-worker0
+[worker]
+worker0 ansible_host=${aws_eip.worker_static_ip.public_ip}
 
 [k8s_cluster:children]
 master0
 worker0
-
 EOF
+}
+
+resource "null_resource" "null1" {
+  depends_on = [
+     local_file.inventory
+  ]
+
+  provisioner "local-exec" {
+    command = "sleep 60"
+  }
+
+  provisioner "local-exec" {
+     command = "ansible-playbook -i inventory --private-key ${var.private_key} -e 'pub_key=${var.public_key}' playbook.yaml"
+  }
+
 }
 
 # --------------- get static IP addresses ------------------
